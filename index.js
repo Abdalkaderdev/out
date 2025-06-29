@@ -120,21 +120,71 @@
   // Set handler for autorotate toggle.
   autorotateToggleElement.addEventListener('click', toggleAutorotate);
 
+  // Add skip to main view link for accessibility
+  var skipLink = document.createElement('a');
+  skipLink.href = '#pano';
+  skipLink.className = 'skip-link';
+  skipLink.textContent = 'Skip to main view';
+  skipLink.tabIndex = 0;
+  skipLink.style.position = 'absolute';
+  skipLink.style.left = '0';
+  skipLink.style.top = '0';
+  skipLink.style.background = '#222';
+  skipLink.style.color = '#fff';
+  skipLink.style.padding = '8px 16px';
+  skipLink.style.zIndex = '10000';
+  skipLink.style.transform = 'translateY(-100%)';
+  skipLink.style.transition = 'transform 0.2s';
+  skipLink.addEventListener('focus', function() {
+    skipLink.style.transform = 'translateY(0)';
+  });
+  skipLink.addEventListener('blur', function() {
+    skipLink.style.transform = 'translateY(-100%)';
+  });
+  document.body.insertBefore(skipLink, document.body.firstChild);
+
+  // Add ARIA live region for scene changes
+  var ariaLive = document.createElement('div');
+  ariaLive.setAttribute('aria-live', 'polite');
+  ariaLive.setAttribute('role', 'status');
+  ariaLive.id = 'ariaLiveRegion';
+  ariaLive.style.position = 'absolute';
+  ariaLive.style.left = '-9999px';
+  document.body.appendChild(ariaLive);
+
+  // Show view control buttons if enabled in settings.
+  if (data.settings.viewControlButtons) {
+    document.body.classList.add('view-control-buttons');
+    console.log('viewControlButtons enabled: .view-control-buttons class added to body');
+  } else {
+    console.log('viewControlButtons disabled');
+  }
+
   // Set up fullscreen mode, if supported.
-  if (screenfull.enabled && data.settings.fullscreenButton) {
+  if (data.settings.fullscreenButton) {
     document.body.classList.add('fullscreen-enabled');
-    fullscreenToggleElement.addEventListener('click', function() {
-      screenfull.toggle();
-    });
-    screenfull.on('change', function() {
-      if (screenfull.isFullscreen) {
-        fullscreenToggleElement.classList.add('enabled');
-      } else {
-        fullscreenToggleElement.classList.remove('enabled');
-      }
-    });
+    console.log('fullscreenButton enabled: .fullscreen-enabled class added to body');
+    if (screenfull && screenfull.enabled) {
+      fullscreenToggleElement.addEventListener('click', function() {
+        screenfull.toggle();
+      });
+      screenfull.on('change', function() {
+        if (screenfull.isFullscreen) {
+          fullscreenToggleElement.classList.add('enabled');
+        } else {
+          fullscreenToggleElement.classList.remove('enabled');
+        }
+      });
+      console.log('Fullscreen API is available.');
+    } else {
+      fullscreenToggleElement.addEventListener('click', function() {
+        alert('Fullscreen mode is not available in this browser/environment');
+      });
+      console.log('Fullscreen API is NOT available, fallback alert set.');
+    }
   } else {
     document.body.classList.add('fullscreen-disabled');
+    console.log('fullscreenButton disabled: .fullscreen-disabled class added to body');
   }
 
   // Set handler for scene list toggle.
@@ -189,6 +239,7 @@
     startAutorotate();
     updateSceneName(scene);
     updateSceneList(scene);
+    announceSceneChange(scene);
   }
 
   function updateSceneName(scene) {
@@ -388,5 +439,58 @@
 
   // Display the initial scene.
   switchScene(scenes[0]);
+
+  // Keyboard shortcuts and accessibility
+  window.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch (e.key) {
+      case 'ArrowUp':
+        viewUpElement.click();
+        console.log('Keyboard: ArrowUp pressed (look up)');
+        break;
+      case 'ArrowDown':
+        viewDownElement.click();
+        console.log('Keyboard: ArrowDown pressed (look down)');
+        break;
+      case 'ArrowLeft':
+        viewLeftElement.click();
+        console.log('Keyboard: ArrowLeft pressed (look left)');
+        break;
+      case 'ArrowRight':
+        viewRightElement.click();
+        console.log('Keyboard: ArrowRight pressed (look right)');
+        break;
+      case '+':
+      case '=':
+        viewInElement.click();
+        console.log('Keyboard: + pressed (zoom in)');
+        break;
+      case '-':
+        viewOutElement.click();
+        console.log('Keyboard: - pressed (zoom out)');
+        break;
+      case 'f':
+      case 'F':
+        fullscreenToggleElement.click();
+        console.log('Keyboard: F pressed (toggle fullscreen)');
+        break;
+      case 'a':
+      case 'A':
+        autorotateToggleElement.click();
+        console.log('Keyboard: A pressed (toggle autorotate)');
+        break;
+      case 's':
+      case 'S':
+        sceneListToggleElement.click();
+        console.log('Keyboard: S pressed (toggle scene list)');
+        break;
+    }
+  });
+
+  // Announce scene changes in ARIA live region
+  function announceSceneChange(scene) {
+    ariaLive.textContent = 'Scene changed to ' + scene.data.name;
+    console.log('ARIA live: Scene changed to ' + scene.data.name);
+  }
 
 })();
